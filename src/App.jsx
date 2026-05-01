@@ -196,11 +196,15 @@ async function callGemini(apiKey, prompt) {
   if (wait > 0) await new Promise(r => setTimeout(r, wait))
   _lastCallMs = Date.now()
 
-  const RETRY_DELAYS = [5000, 10000, 20000]
+  const RETRY_DELAYS_503 = [5000, 10000, 20000]
+  const RETRY_DELAY_429 = 65000  // 1분 window 초기화 대기
   let lastErr
-  for (let attempt = 0; attempt < 1 + RETRY_DELAYS.length; attempt++) {
+  let retried429 = false
+  for (let attempt = 0; attempt < 1 + RETRY_DELAYS_503.length; attempt++) {
     if (attempt > 0) {
-      await new Promise(r => setTimeout(r, RETRY_DELAYS[attempt - 1]))
+      const prev = lastErr?.message || ''
+      const delay = prev.includes('429') ? RETRY_DELAY_429 : RETRY_DELAYS_503[attempt - 1]
+      await new Promise(r => setTimeout(r, delay))
       _lastCallMs = Date.now()
     }
     try {
@@ -217,6 +221,13 @@ async function callGemini(apiKey, prompt) {
       })
       if (!res.ok) {
         const txt = await res.text()
+        if (res.status === 429) {
+          throw new Error(
+            retried429
+              ? '무료 API 일일 쿼터 소진 (429). 자정 이후 초기화되거나 유료 플랜(pay-as-you-go)으로 전환 시 계속 사용 가능합니다.'
+              : `[429] 분당 요청 초과 — 65초 후 자동 재시도 중…`
+          )
+        }
         throw new Error(`Gemini ${res.status}: ${txt.slice(0, 300)}`)
       }
       const data  = await res.json()
@@ -226,7 +237,9 @@ async function callGemini(apiKey, prompt) {
       return text
     } catch (e) {
       lastErr = e
-      if ((e.message || '').includes('503') && attempt < RETRY_DELAYS.length) continue
+      const msg = e.message || ''
+      if (msg.includes('503') && attempt < RETRY_DELAYS_503.length) continue
+      if (msg.includes('[429]') && !retried429) { retried429 = true; continue }
       throw e
     }
   }
