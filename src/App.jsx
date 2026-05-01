@@ -462,8 +462,8 @@ function SetupView({ onStart }) {
           <div>
             <div className="font-mono text-[11px] tracking-widest text-[var(--amber)] mb-2">ABOUT</div>
             <p className="text-[var(--text-dim)] text-sm leading-relaxed">
-              이 도구는 <span className="text-[var(--text)] font-medium">생성형 AI 에이전트(Generative Agent)</span>를 활용한
-              사회과학 시뮬레이션입니다. 서로 다른 정치 성향·배경을 가진 가상의 시민들이 특정 뉴스를 읽고 상호 토론하면서
+              <span className="text-[var(--text)] font-medium">생성형 AI 에이전트(Generative Agent)</span> 기반
+              사회과학 시뮬레이션 플랫폼입니다. 서로 다른 정치 성향·배경을 가진 가상의 시민들이 특정 뉴스를 읽고 상호 토론하면서
               태도(Attitude)가 어떻게 변화하는지를 라운드별로 추적합니다.
               편향 강화·의견 수렴·극화(Polarization) 등 사회적 동학을 실험적으로 관찰할 수 있습니다.
             </p>
