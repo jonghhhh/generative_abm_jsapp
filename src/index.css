@@ -1,0 +1,59 @@
+:root {
+  --bg: #0a0f1c;
+  --surface: #131a2b;
+  --surface-2: #1a2238;
+  --border: #283149;
+  --text: #e8eaed;
+  --text-dim: #9ca3af;
+  --text-faint: #6b7587;
+  --amber: #f59e0b;
+  --cyan: #22d3ee;
+  --rose: #fb7185;
+  --emerald: #34d399;
+  --violet: #a78bfa;
+}
+
+html, body { background: var(--bg); color: var(--text); }
+body {
+  font-family: 'IBM Plex Sans KR', -apple-system, sans-serif;
+  font-feature-settings: 'tnum' 1, 'kern' 1;
+  -webkit-font-smoothing: antialiased;
+}
+.font-display { font-family: 'Fraunces', 'Noto Serif KR', serif; font-optical-sizing: auto; letter-spacing: -0.02em; }
+.font-mono { font-family: 'JetBrains Mono', monospace; }
+.grain {
+  background-image:
+    radial-gradient(ellipse at top left, rgba(245,158,11,0.06), transparent 50%),
+    radial-gradient(ellipse at bottom right, rgba(34,211,238,0.05), transparent 50%);
+}
+.scroll-thin::-webkit-scrollbar { width: 6px; height: 6px; }
+.scroll-thin::-webkit-scrollbar-thumb { background: #283149; border-radius: 3px; }
+.scroll-thin::-webkit-scrollbar-track { background: transparent; }
+.panel { background: var(--surface); border: 1px solid var(--border); }
+.panel-2 { background: var(--surface-2); border: 1px solid var(--border); }
+.pulse-dot::before {
+  content: ''; display: inline-block; width: 6px; height: 6px;
+  border-radius: 50%; background: #34d399; margin-right: 6px;
+  animation: pulse 1.4s ease-in-out infinite;
+  vertical-align: middle;
+}
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+.fade-in { animation: fadeIn .35s ease-out; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+.ring-glow { box-shadow: 0 0 0 1px var(--border), 0 0 24px -8px rgba(245,158,11,0.3); }
+.att-track { background: linear-gradient(to right,
+  rgba(34,211,238,0.6) 0%, rgba(34,211,238,0.1) 40%,
+  rgba(255,255,255,0.05) 50%,
+  rgba(245,158,11,0.1) 60%, rgba(245,158,11,0.6) 100%);
+}
+@keyframes glow-pulse {
+  0%,100% { box-shadow: 0 0 8px 2px currentColor; }
+  50%      { box-shadow: 0 0 24px 6px currentColor; }
+}
+.glow-anim { animation: glow-pulse 1.2s ease-in-out infinite; }
+@keyframes connecting {
+  0%   { opacity: 0.3; transform: scaleX(0.6); }
+  50%  { opacity: 1;   transform: scaleX(1); }
+  100% { opacity: 0.3; transform: scaleX(0.6); }
+}
+.connecting { animation: connecting 1.5s ease-in-out infinite; }
