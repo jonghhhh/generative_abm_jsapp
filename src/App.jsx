@@ -1237,8 +1237,8 @@ function SimulationView({ config, onBack }) {
             </div>
             <label className="flex items-center gap-2 text-xs">
               <span className="text-[var(--text-faint)] font-mono">ROUNDS</span>
-              <input type="number" min="1" max="20" value={maxRounds} disabled={isRunning}
-                onChange={e => setMaxRounds(clamp(parseInt(e.target.value) || 5, 1, 20))}
+              <input type="number" min="1" max="5" value={maxRounds} disabled={isRunning}
+                onChange={e => setMaxRounds(clamp(parseInt(e.target.value) || 5, 1, 5))}
                 className="w-14 bg-[var(--bg)] border border-[var(--border)] rounded px-2 py-1 text-sm font-mono text-center disabled:opacity-50" />
             </label>
             {!isRunning ? (
