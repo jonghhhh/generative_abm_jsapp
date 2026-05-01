@@ -1030,11 +1030,13 @@ function SimulationView({ config, onBack }) {
     if (!scriptUrl) return
     fetch(scriptUrl, {
       method: 'POST',
-      mode: 'no-cors',
       headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify({ action: 'log', kind, payload }),
-    }).catch(() => {})
-  }, [scriptUrl])
+    })
+      .then(r => r.json())
+      .then(data => { if (!data?.ok) log(`⚠ 시트 저장 실패 [${kind}]: ${data?.error || '알 수 없음'}`, 'err') })
+      .catch(e => log(`⚠ 시트 연결 오류 [${kind}]: ${e.message}`, 'err'))
+  }, [scriptUrl, log])
 
   const status = isRunning
     ? `R${currentRound} 실행 중`
