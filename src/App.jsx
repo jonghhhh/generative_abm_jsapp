@@ -424,12 +424,14 @@ function AgentForm({ agent, index, onChange }) {
 }
 
 function SetupView({ onStart }) {
-  const [apiKey, setApiKey] = useState(() => localStorage.getItem('gemini_key') || '')
-  const [agents, setAgents] = useState(() => DEFAULT_AGENTS.map(a => ({ ...a })))
-  const [topic,  setTopic]  = useState(DEFAULT_TOPIC)
-  const [error,  setError]  = useState('')
+  const [apiKey,    setApiKey]    = useState(() => localStorage.getItem('gemini_key')  || '')
+  const [scriptUrl, setScriptUrl] = useState(() => localStorage.getItem('gas_url')     || '')
+  const [agents,    setAgents]    = useState(() => DEFAULT_AGENTS.map(a => ({ ...a })))
+  const [topic,     setTopic]     = useState(DEFAULT_TOPIC)
+  const [error,     setError]     = useState('')
 
-  useEffect(() => { localStorage.setItem('gemini_key', apiKey) }, [apiKey])
+  useEffect(() => { localStorage.setItem('gemini_key', apiKey)    }, [apiKey])
+  useEffect(() => { localStorage.setItem('gas_url',    scriptUrl) }, [scriptUrl])
 
   const updateAgent = (idx, field, value) =>
     setAgents(prev => prev.map((a, i) => i === idx ? { ...a, [field]: value } : a))
@@ -438,7 +440,7 @@ function SetupView({ onStart }) {
     if (!apiKey.trim()) { setError('Gemini API Key를 입력하세요.'); return }
     if (agents.some(a => !a.name.trim())) { setError('모든 에이전트의 이름을 입력하세요.'); return }
     setError('')
-    onStart({ apiKey: apiKey.trim(), agents, topic })
+    onStart({ apiKey: apiKey.trim(), scriptUrl: scriptUrl.trim(), agents, topic })
   }
 
   return (
@@ -506,6 +508,15 @@ function SetupView({ onStart }) {
             placeholder="AIzaSy..."
             className="w-full bg-[var(--bg)] border border-[var(--border)] rounded px-3 py-2.5 text-sm font-mono focus:border-[var(--amber)] outline-none" />
           <KeyInstructions />
+          <div>
+            <div className="text-[10px] font-mono uppercase text-[var(--text-faint)] mb-1">
+              Apps Script URL{' '}
+              <span className="normal-case font-normal">— 선택사항 · 입력 시 결과가 Google Sheets에 자동 저장</span>
+            </div>
+            <input type="text" value={scriptUrl} onChange={e => setScriptUrl(e.target.value)}
+              placeholder="https://script.google.com/macros/s/…/exec"
+              className="w-full bg-[var(--bg)] border border-[var(--border)] rounded px-3 py-2.5 text-sm font-mono focus:border-[var(--amber)] outline-none" />
+          </div>
         </section>
 
         {/* Topic */}
@@ -964,7 +975,7 @@ function ResultsPanel({ agents, conversations, topic, simulationId, currentRound
  * 5. 시뮬레이션 뷰 (메인 실행)
  * ============================================================ */
 function SimulationView({ config, onBack }) {
-  const { apiKey, agents: configAgents, topic } = config
+  const { apiKey, scriptUrl, agents: configAgents, topic } = config
 
   const makeInitialAgents = useCallback(() =>
     configAgents.map(a => ({
@@ -998,6 +1009,15 @@ function SimulationView({ config, onBack }) {
     const t = new Date().toLocaleTimeString('ko-KR', { hour12: false })
     setLogs(ls => [...ls.slice(-300), { t, msg, kind }])
   }, [])
+
+  const logToSheets = useCallback((kind, payload) => {
+    if (!scriptUrl) return
+    fetch(scriptUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'log', kind, payload }),
+    }).catch(() => {})
+  }, [scriptUrl])
 
   const status = isRunning
     ? `R${currentRound} 실행 중`
@@ -1058,6 +1078,17 @@ function SimulationView({ config, onBack }) {
       }))
       setLastDeltas(d => ({ ...d, [A.id]: r.aDelta, [B.id]: r.bDelta }))
       setConversations(cs => [...cs, { ...r, key: `${round}-${A.id}-${B.id}` }])
+      logToSheets('conversation', {
+        simulationId: sid,
+        round,
+        agentAId: A.id, agentAName: A.name,
+        agentBId: B.id, agentBName: B.name,
+        dialogue: r.dialogue,
+        aOldAttitude: A.attitude, aNewAttitude: r.aNew, aDelta: r.aDelta,
+        aMemory: r.aMemory, aReason: r.aReason,
+        bOldAttitude: B.attitude, bNewAttitude: r.bNew, bDelta: r.bDelta,
+        bMemory: r.bMemory, bReason: r.bReason,
+      })
       log(`✓ ${A.name}(${r.aDelta > 0 ? '+' : ''}${r.aDelta}) ↔ ${B.name}(${r.bDelta > 0 ? '+' : ''}${r.bDelta})`, 'ok')
     }
 
@@ -1072,6 +1103,14 @@ function SimulationView({ config, onBack }) {
     const atts = snap.map(a => a.attitude)
     const mean = atts.reduce((s, v) => s + v, 0) / atts.length
     log(`R${round} 완료 · σ=${polarization(snap).toFixed(2)} · 평균=${mean.toFixed(2)}`, 'ok')
+    logToSheets('round_stats', {
+      simulationId: sid,
+      round,
+      polarization: parseFloat(polarization(snap).toFixed(3)),
+      mean: parseFloat(mean.toFixed(3)),
+      min: Math.min(...atts),
+      max: Math.max(...atts),
+    })
   }
 
   const onStart = async () => {
@@ -1089,6 +1128,17 @@ function SimulationView({ config, onBack }) {
       setCurrentRound(0)
       from = 0
       log('새 시뮬레이션: ' + sid, 'ok')
+      logToSheets('simulation_start', {
+        simulationId: sid,
+        startedAt: new Date().toISOString(),
+        topicHeadline: topic.headline,
+        numAgents: configAgents.length,
+        maxRounds,
+        agents: configAgents.map(a => ({
+          id: a.id, name: a.name, age: a.age, occupation: a.occupation,
+          ideology: a.ideology, initialAttitude: a.initialAttitude,
+        })),
+      })
     }
     stopRef.current = false
     setIsRunning(true)
