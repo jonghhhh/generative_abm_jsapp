@@ -11,6 +11,7 @@ const GEMINI_MODEL    = 'gemini-2.5-flash-lite'
 const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`
 const RATE_LIMIT_MS   = 4500   // 15 RPM → 최소 4초 간격 + 여유
 const DAILY_CALL_LIMIT = 50    // 브라우저(기기)당 일일 API 호출 상한
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbwMhTqinEoxTmIE_ytNIT_VuB9s4LcbseXMeyXXl75CO80f7B1GLLRShJYTXo2Z2UU/exec'
 
 const IDEOLOGY_COLOR = {
   hard_conservative: '#dc2626',
@@ -440,14 +441,12 @@ function AgentForm({ agent, index, onChange }) {
 }
 
 function SetupView({ onStart }) {
-  const [apiKey,    setApiKey]    = useState(() => localStorage.getItem('gemini_key')  || '')
-  const [scriptUrl, setScriptUrl] = useState(() => localStorage.getItem('gas_url')     || '')
-  const [agents,    setAgents]    = useState(() => DEFAULT_AGENTS.map(a => ({ ...a })))
-  const [topic,     setTopic]     = useState(DEFAULT_TOPIC)
-  const [error,     setError]     = useState('')
+  const [apiKey,  setApiKey]  = useState(() => localStorage.getItem('gemini_key') || '')
+  const [agents,  setAgents]  = useState(() => DEFAULT_AGENTS.map(a => ({ ...a })))
+  const [topic,   setTopic]   = useState(DEFAULT_TOPIC)
+  const [error,   setError]   = useState('')
 
-  useEffect(() => { localStorage.setItem('gemini_key', apiKey)    }, [apiKey])
-  useEffect(() => { localStorage.setItem('gas_url',    scriptUrl) }, [scriptUrl])
+  useEffect(() => { localStorage.setItem('gemini_key', apiKey) }, [apiKey])
 
   const updateAgent = (idx, field, value) =>
     setAgents(prev => prev.map((a, i) => i === idx ? { ...a, [field]: value } : a))
@@ -456,7 +455,7 @@ function SetupView({ onStart }) {
     if (!apiKey.trim()) { setError('Gemini API Key를 입력하세요.'); return }
     if (agents.some(a => !a.name.trim())) { setError('모든 에이전트의 이름을 입력하세요.'); return }
     setError('')
-    onStart({ apiKey: apiKey.trim(), scriptUrl: scriptUrl.trim(), agents, topic })
+    onStart({ apiKey: apiKey.trim(), agents, topic })
   }
 
   return (
@@ -524,15 +523,6 @@ function SetupView({ onStart }) {
             placeholder="AIzaSy..."
             className="w-full bg-[var(--bg)] border border-[var(--border)] rounded px-3 py-2.5 text-sm font-mono focus:border-[var(--amber)] outline-none" />
           <KeyInstructions />
-          <div>
-            <div className="text-[10px] font-mono uppercase text-[var(--text-faint)] mb-1">
-              Apps Script URL{' '}
-              <span className="normal-case font-normal">— 선택사항 · 입력 시 결과가 Google Sheets에 자동 저장</span>
-            </div>
-            <input type="text" value={scriptUrl} onChange={e => setScriptUrl(e.target.value)}
-              placeholder="https://script.google.com/macros/s/…/exec"
-              className="w-full bg-[var(--bg)] border border-[var(--border)] rounded px-3 py-2.5 text-sm font-mono focus:border-[var(--amber)] outline-none" />
-          </div>
         </section>
 
         {/* Topic */}
@@ -991,7 +981,8 @@ function ResultsPanel({ agents, conversations, topic, simulationId, currentRound
  * 5. 시뮬레이션 뷰 (메인 실행)
  * ============================================================ */
 function SimulationView({ config, onBack }) {
-  const { apiKey, scriptUrl, agents: configAgents, topic } = config
+  const { apiKey, agents: configAgents, topic } = config
+  const scriptUrl = GAS_URL
 
   const makeInitialAgents = useCallback(() =>
     configAgents.map(a => ({
