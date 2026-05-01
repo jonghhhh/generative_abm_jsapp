@@ -185,7 +185,8 @@ function checkDailyLimit() {
 /* ============================================================
  * 3. Gemini API 직접 호출 (브라우저 → Google)
  * ============================================================ */
-let _lastCallMs = 0  // 모듈 수준 rate-limit 추적
+// localStorage 영속으로 페이지 새로고침·재시작 후에도 RPM 제한 유지
+let _lastCallMs = parseInt(localStorage.getItem('_last_call_ms') || '0')
 
 async function callGemini(apiKey, prompt) {
   // 일일 한도 확인
@@ -195,6 +196,7 @@ async function callGemini(apiKey, prompt) {
   const wait = _lastCallMs + RATE_LIMIT_MS - Date.now()
   if (wait > 0) await new Promise(r => setTimeout(r, wait))
   _lastCallMs = Date.now()
+  localStorage.setItem('_last_call_ms', String(_lastCallMs))
 
   const RETRY_DELAYS_503 = [5000, 10000, 20000]
   const RETRY_DELAY_429 = 65000  // 1분 window 초기화 대기
@@ -206,6 +208,7 @@ async function callGemini(apiKey, prompt) {
       const delay = prev.includes('429') ? RETRY_DELAY_429 : RETRY_DELAYS_503[attempt - 1]
       await new Promise(r => setTimeout(r, delay))
       _lastCallMs = Date.now()
+      localStorage.setItem('_last_call_ms', String(_lastCallMs))
     }
     try {
       const res = await fetch(`${GEMINI_ENDPOINT}?key=${encodeURIComponent(apiKey)}`, {
